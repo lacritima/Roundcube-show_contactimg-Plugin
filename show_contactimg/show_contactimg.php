@@ -8,7 +8,7 @@
  * Enable the plugin in config/main.inc.php
  * $rcmail_config['plugins'] = array('show_contactimg');
  *
- * @version 0.1
+ * @version 0.2
  * @author Eric Appelt
  * @website http://www.php-lexikon.de
  */
@@ -16,7 +16,7 @@
 class show_contactimg extends rcube_plugin {
 	public $task = 'mail';
 	public $nopic = '/images/contactpic.png';
-  public $rc;
+	public $rc;
 
 	private $contactphoto;
 	private $sender;
@@ -50,7 +50,7 @@ class show_contactimg extends rcube_plugin {
 				return $this->nopic;
 
 			$picname = $sender_id.$filetype;
-      $tmpname = $this->homedir.$picname;
+			$tmpname = $this->homedir.$picname;
 			if(!file_exists($tmpname)) {
 				$handle = fopen($tmpname, "w");
 				fwrite($handle, $data);
@@ -66,17 +66,20 @@ class show_contactimg extends rcube_plugin {
 	function message_load($p) {
 		$this->sender = (array )$p['object']->sender;
 		$sender_id = md5(strtolower($this->sender['mailto']));
+		$book_types = $this->rc->config->get('autocomplete_addressbooks', array('sql'));
 
-		$CONTACTS = $this->rc->get_address_book(null, true);
-		$existing_contact = $CONTACTS->search('email', $this->sender['mailto'], false, true)->records[0]['photo'];
-
-		if($existing_contact) {
-			$this->contactphoto = $this->show_image($existing_contact, $sender_id);
+		foreach($book_types as $id) {
+			$abook = $this->rc->get_address_book($id, true);
+			$existing_contact = $abook->search('email', $this->sender['mailto'], false, true)->records[0]['photo'];
+			if($existing_contact) {
+				$this->contactphoto = $this->show_image($existing_contact, $sender_id);
+			}
 		}
-		else {
+		if(!$this->contactphoto)
 			$this->contactphoto = $this->nopic;
-    }
-  }
+
+		return $this->contactphoto;
+	}
 
 	function contactimg() {
 		return html::div(array('class' => 'contactphoto'), html::img(array('src' => $this->contactphoto, 'height' => '60', 'title' => $this->sender['mailto'], 'alt' => $this->sender['mailto'])));
