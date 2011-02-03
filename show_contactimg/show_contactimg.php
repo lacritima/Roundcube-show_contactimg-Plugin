@@ -8,7 +8,7 @@
  * Enable the plugin in config/main.inc.php
  * $rcmail_config['plugins'] = array('show_contactimg');
  *
- * @version 0.3
+ * @version 0.4
  * @author Eric Appelt
  * @website http://www.php-lexikon.de
  */
@@ -76,6 +76,14 @@ class show_contactimg extends rcube_plugin {
 			$abook = $this->rc->get_address_book($id, true);
 			$existing_contact = $abook->search('email', $this->sender['mailto'], false, true)->records[0]['photo'];
 			if($existing_contact) {
+			  /** 
+         * Add User ID for non Global Contacts to sender_id 
+         * for the Case thats different Users has the same Contacts
+         * in Addressbook with different Contact Photos.
+         */
+        if($id != 'global') {
+          $sender_id = md5(strtolower(trim($this->sender['mailto'].strrev(trim($this->rc->user->ID)))));
+        } 
 				$this->contactphoto = $this->show_image($existing_contact, $sender_id);
 			}
 		}

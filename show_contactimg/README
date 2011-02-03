@@ -1,0 +1,18 @@
+Show VCard 3.0 Contact Photo for sender or Gravatar Icon for Sender
+
+This plugin will show contact picture for message sender.
+This will only work with Roundcube 0.6-svn  
+
+Enable the plugin in config/main.inc.php
+$rcmail_config['plugins'] = array('show_contactimg');
+
+Set tmp Folder rights to writeable
+
+Author Eric Appelt
+Website http://www.php-lexikon.de
+
+Changes:
+v0.4 - Fix show picture from another User for the same Contact
+v0.3 - add support for Gravatar Images as Fallback
+v0.2 - add support for global Addressbook plugin
+v0.1 - Initial
