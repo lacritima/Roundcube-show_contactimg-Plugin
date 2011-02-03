@@ -1,6 +1,6 @@
 <?php
 /**
- * Show VCard Contact Photo for sender
+ * Show VCard Contact Photo for sender or Gravatar Icon for Sender
  *
  * This plugin will show contact picture for message sender.
  * This will only work with Roundcube 0.6-svn  
@@ -8,16 +8,21 @@
  * Enable the plugin in config/main.inc.php
  * $rcmail_config['plugins'] = array('show_contactimg');
  *
- * @version 0.2
+ * @version 0.3
  * @author Eric Appelt
  * @website http://www.php-lexikon.de
  */
 
 class show_contactimg extends rcube_plugin {
 	public $task = 'mail';
-	public $nopic = '/images/contactpic.png';
-	public $rc;
-
+	
+  // default no pic
+  private $nopic = '/images/contactpic.png';
+  // the size for picture and gravatar
+  private $picsize = '60';
+  // set this to true for gravatar fallback
+  private $usegravatar = true;	
+  private $rc;
 	private $contactphoto;
 	private $sender;
 
@@ -30,12 +35,11 @@ class show_contactimg extends rcube_plugin {
 			$this->add_hook('message_load', array($this, 'message_load'));
 			$this->add_hook('template_object_messageheaders', array($this, 'html_output'));
 
-			// add style for placing photo
 			$this->include_stylesheet("skins/default/show_contactimg.css");
 		}
 	}
 
-	function show_image($data, $sender_id) {
+	private function show_image($data, $sender_id) {
 		if(!preg_match('![^a-z0-9/=+-]!i', $data)) {
 			$data = base64_decode($data, true);
 			$mimetype = rc_image_content_type($data);
@@ -63,9 +67,9 @@ class show_contactimg extends rcube_plugin {
 		}
 	}
 
-	function message_load($p) {
+	public function message_load($p) {
 		$this->sender = (array )$p['object']->sender;
-		$sender_id = md5(strtolower($this->sender['mailto']));
+		$sender_id = md5(strtolower(trim($this->sender['mailto'])));
 		$book_types = $this->rc->config->get('autocomplete_addressbooks', array('sql'));
 
 		foreach($book_types as $id) {
@@ -75,17 +79,22 @@ class show_contactimg extends rcube_plugin {
 				$this->contactphoto = $this->show_image($existing_contact, $sender_id);
 			}
 		}
-		if(!$this->contactphoto)
-			$this->contactphoto = $this->nopic;
 
+    if($this->usegravatar == true and !$this->contactphoto) {
+      $rcbaseurl = 'http'.(($_SERVER['HTTPS']=='on') ? 's' : '').'://'.$_SERVER['HTTP_HOST'].str_replace($_SERVER['DOCUMENT_ROOT'],'',INSTALL_PATH).'skins/default'.$this->nopic;
+      $this->contactphoto = "http://www.gravatar.com/avatar/".$sender_id."?d=".urlencode($rcbaseurl)."&s=".$this->picsize;
+    }
+    elseif(!$this->contactphoto) {
+			$this->contactphoto = $this->nopic;
+    }
 		return $this->contactphoto;
 	}
 
-	function contactimg() {
-		return html::div(array('class' => 'contactphoto'), html::img(array('src' => $this->contactphoto, 'height' => '60', 'title' => $this->sender['mailto'], 'alt' => $this->sender['mailto'])));
+	private function contactimg() {
+		return html::div(array('class' => 'contactphoto'), html::img(array('src' => $this->contactphoto, 'height' => $this->picsize, 'title' => $this->sender['mailto'], 'alt' => $this->sender['mailto'])));
 	}
 
-	function html_output($p) {
+	public function html_output($p) {
 		$p['content'] = $this->contactimg($p).$p['content'];
 
 		return $p;
